@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isStatusPageIpAllowed } from './lib/status-page'
 
-const allowedOrigins = new Set((process.env.CORS_ORIGINS ?? 'https://www.egui404.fun,https://egui404.fun').split(',').map((origin) => origin.trim()).filter(Boolean))
+const officialOrigins = new Set(['https://egui404.fun', 'https://www.egui404.fun'])
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter((origin) => officialOrigins.has(origin)),
+)
+for (const origin of officialOrigins) allowedOrigins.add(origin)
 
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === '/backend-status.html') {
