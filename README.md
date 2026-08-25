@@ -1,33 +1,104 @@
-# e-gui-404-beck-end
+# E GUI 404 — Backend API
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+<p align="center">
+  <strong>Cyber Awareness · Scam Intelligence · Digital Safety</strong>
+</p>
 
-## Built with v0
+<p align="center">
+  Backend oficial da plataforma E GUI 404.
+</p>
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+<p align="center">
+  <a href="https://egui404.fun">Frontend</a> ·
+  <a href="https://api.egui404.fun">API</a> ·
+  <a href="https://api.egui404.fun/api/v1/openapi">OpenAPI</a>
+</p>
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_cb0eegGdl8Saht4xjaZv6aba7bVO)
+---
 
-## Getting Started
+## Sobre o projeto
 
-First, run the development server:
+O E GUI 404 é uma plataforma independente de conscientização, educação e inteligência defensiva relacionada a:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+- golpes digitais;
+- fraudes;
+- phishing;
+- engenharia social;
+- ameaças cibernéticas;
+- segurança digital;
+- casos investigativos;
+- educação em segurança;
+- inteligência de ameaças;
+- participação comunitária defensiva.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Este repositório contém exclusivamente o backend da plataforma.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O backend é responsável por:
 
-## Learn More
+- API REST versionada;
+- autenticação;
+- sessões;
+- usuários;
+- RBAC;
+- permissões;
+- conteúdo editorial;
+- ameaças;
+- golpes;
+- casos;
+- artigos;
+- alertas;
+- fórum;
+- denúncias;
+- notificações;
+- moderação;
+- auditoria;
+- analytics;
+- fontes;
+- integração preparada com RNP/CAIS;
+- busca;
+- health checks;
+- documentação OpenAPI.
 
-To learn more, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+# Arquitetura
+
+```text
+                         ┌─────────────────────┐
+                         │     E GUI 404       │
+                         │   egui404.fun       │
+                         └──────────┬──────────┘
+                                    │
+                                    │ HTTPS
+                                    ▼
+                         ┌─────────────────────┐
+                         │     Cloudflare      │
+                         │ WAF / DDoS / TLS    │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │       Vercel        │
+                         │     Next.js 16      │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │      API v1         │
+                         │ /api/v1/*           │
+                         └──────────┬──────────┘
+                                    │
+                 ┌──────────────────┼──────────────────┐
+                 │                  │                  │
+                 ▼                  ▼                  ▼
+        ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
+        │ Better Auth    │ │ Business APIs  │ │ Audit / RBAC   │
+        │ Sessions       │ │ Domain Modules  │ │ Permissions    │
+        └────────────────┘ └────────────────┘ └────────────────┘
+                 │                  │                  │
+                 └──────────────────┼──────────────────┘
+                                    ▼
+                         ┌─────────────────────┐
+                         │   Neon PostgreSQL   │
+                         │      Database       │
+                         └─────────────────────┘
