@@ -1,4 +1,25 @@
-export default function Page() {
+import { headers } from 'next/headers'
+import { db } from '@/lib/db'
+import { error404Visits } from '@/lib/db/schema'
+
+export const dynamic = 'force-dynamic'
+
+async function registerVisit() {
+  try {
+    const requestHeaders = await headers()
+    await db.insert(error404Visits).values({
+      path: requestHeaders.get('x-invoke-path') ?? '/',
+      referrer: requestHeaders.get('referer'),
+      userAgent: requestHeaders.get('user-agent'),
+    })
+  } catch (error) {
+    console.error('[v0] Falha ao registrar visita 404:', error)
+  }
+}
+
+export default async function Page() {
+  await registerVisit()
+
   return (
     <main
       style={{
@@ -24,7 +45,7 @@ export default function Page() {
         strokeWidth="0.5"
       >
         <path
-          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
+          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
           strokeLinejoin="round"
         />
       </svg>
