@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS forum_posts (id BIGSERIAL PRIMARY KEY, thread_id BIGINT NOT NULL REFERENCES forum_threads(id) ON DELETE CASCADE, author_id TEXT NOT NULL REFERENCES "user"(id), body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PUBLISHED', is_demo BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS forum_thread_likes (thread_id BIGINT NOT NULL REFERENCES forum_threads(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (thread_id, user_id));
+CREATE TABLE IF NOT EXISTS forum_thread_bookmarks (thread_id BIGINT NOT NULL REFERENCES forum_threads(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (thread_id, user_id));
+CREATE INDEX IF NOT EXISTS forum_posts_thread_created_idx ON forum_posts(thread_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS forum_threads_category_status_idx ON forum_threads(category_id, status, created_at DESC);

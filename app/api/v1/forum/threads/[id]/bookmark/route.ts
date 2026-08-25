@@ -1,0 +1,7 @@
+import { NextRequest } from 'next/server'
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { requireSession } from '@/lib/api/auth'
+import { fail, ok } from '@/lib/api/http'
+type Ctx={params:Promise<{id:string}>}
+export async function POST(_:NextRequest,{params}:Ctx){try{const s=await requireSession();const {id}=await params;const t=await db.execute(sql`SELECT id FROM forum_threads WHERE id=${id} AND status <> 'ARCHIVED'`);if(!t.length)return fail('Thread não encontrada.',404);const x=await db.execute(sql`SELECT 1 FROM forum_thread_bookmarks WHERE thread_id=${id} AND user_id=${s.user.id}`);if(x.length)await db.execute(sql`DELETE FROM forum_thread_bookmarks WHERE thread_id=${id} AND user_id=${s.user.id}`);else await db.execute(sql`INSERT INTO forum_thread_bookmarks(thread_id,user_id) VALUES(${id},${s.user.id}) ON CONFLICT DO NOTHING`);return ok({bookmarked:!x.length})}catch(e){if(e instanceof Error&&e.message==='UNAUTHORIZED')return fail('Autenticação necessária.',401);return fail('Não foi possível alterar o bookmark.',409)}}
