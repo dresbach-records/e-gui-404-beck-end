@@ -1,0 +1,9 @@
+import { NextRequest } from 'next/server'
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { requireSession } from '@/lib/api/auth'
+import { fail, ok, pagination } from '@/lib/api/http'
+
+type Ctx = { params: Promise<{ id: string }> }
+export async function GET(request: NextRequest) { const { page, limit, offset } = pagination(request.nextUrl.searchParams); const q = request.nextUrl.searchParams.get('q'); const category = request.nextUrl.searchParams.get('category'); try { const rows = await db.execute(sql`SELECT t.*, c.name AS category_name FROM forum_threads t JOIN forum_categories c ON c.id=t.category_id WHERE t.status <> 'ARCHIVED' AND (${q}::text IS NULL OR t.title ILIKE ${`%${q ?? ''}%`} OR t.body ILIKE ${`%${q ?? ''}%`}) AND (${category}::text IS NULL OR t.category_id = ${category ?? ''}) ORDER BY t.created_at DESC LIMIT ${limit} OFFSET ${offset}`); return ok({ items: rows, page, limit }) } catch { return fail('Não foi possível carregar as threads.', 503) } }
+export async function POST(request: NextRequest) { try { const session = await requireSession(); const b = await request.json(); if (!b.title || !b.body || !b.category_id || !b.slug) return fail('title, body, slug e category_id são obrigatórios.', 422); const category = await db.execute(sql`SELECT id FROM forum_categories WHERE id=${b.category_id}`); if (!category.length) return fail('Categoria não encontrada.', 404); const rows = await db.execute(sql`INSERT INTO forum_threads (category_id, author_id, slug, title, body, status) VALUES (${b.category_id}, ${session.user.id}, ${b.slug}, ${b.title}, ${b.body}, 'OPEN') RETURNING *`); return ok({ thread: rows[0] }, 201) } catch (e) { if (e instanceof Error && e.message === 'UNAUTHORIZED') return fail('Autenticação necessária.', 401); return fail('Não foi possível criar a thread.', 409) } }

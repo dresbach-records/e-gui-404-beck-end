@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
+import { NextRequest } from 'next/server'
 import { sql } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-export async function GET() { const session = await auth.api.getSession({ headers: await headers() }); if (!session?.user) return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Autenticação necessária.' } }, { status: 401 }); const rows = await db.execute(sql`SELECT id, entity_type, entity_id, reason, status, created_at FROM reports WHERE status IN ('PENDING','UNDER_REVIEW','ESCALATED') ORDER BY created_at ASC LIMIT 100`); return NextResponse.json({ data: rows.rows }) }
+import { requirePermission } from '@/lib/api/auth'
+import { fail, ok, pagination } from '@/lib/api/http'
+export async function GET(request:NextRequest){try{await requirePermission('forum.moderate');const {page,limit,offset}=pagination(request.nextUrl.searchParams);const rows=await db.execute(sql`SELECT id,reporter_id,entity_type,entity_id,reason,details,status,created_at FROM reports WHERE status IN ('OPEN','PENDING','UNDER_REVIEW','ESCALATED') ORDER BY created_at ASC LIMIT ${limit} OFFSET ${offset}`);return ok({items:rows,page,limit})}catch(e){if(e instanceof Error&&e.message==='FORBIDDEN')return fail('Sem autorização.',403);if(e instanceof Error&&e.message==='UNAUTHORIZED')return fail('Autenticação necessária.',401);return fail('Não foi possível carregar a moderação.',503)}}
+export async function PATCH(request:NextRequest){try{await requirePermission('forum.moderate');const b=await request.json();if(!b.id||!['OPEN','UNDER_REVIEW','RESOLVED','REJECTED'].includes(b.status))return fail('id e status válido são obrigatórios.',422);const rows=await db.execute(sql`UPDATE reports SET status=${b.status} WHERE id=${b.id} RETURNING *`);if(!rows.length)return fail('Denúncia não encontrada.',404);return ok({report:rows[0]})}catch(e){if(e instanceof Error&&e.message==='FORBIDDEN')return fail('Sem autorização.',403);if(e instanceof Error&&e.message==='UNAUTHORIZED')return fail('Autenticação necessária.',401);return fail('Não foi possível atualizar a denúncia.',409)}}

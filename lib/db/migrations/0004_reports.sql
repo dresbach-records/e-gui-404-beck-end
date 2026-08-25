@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS reports (id BIGSERIAL PRIMARY KEY, reporter_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, reason TEXT NOT NULL, details TEXT, status TEXT NOT NULL DEFAULT 'OPEN', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (reporter_id, entity_type, entity_id, status));
