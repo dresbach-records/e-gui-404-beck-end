@@ -1,0 +1,5 @@
+import { NextResponse } from 'next/server'
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { pagination } from '@/lib/api/http'
+export async function GET(request: Request) { const { searchParams } = new URL(request.url); const q = searchParams.get('q')?.trim(); if (!q) return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'q é obrigatório.' } }, { status: 422 }); const { page, limit, offset } = pagination(searchParams); const term = `%${q}%`; const result = await db.execute(sql`SELECT 'threat' AS type, id, slug, title, summary, created_at FROM threats WHERE title ILIKE ${term} OR summary ILIKE ${term} UNION ALL SELECT 'scam', id, slug, title, summary, created_at FROM scams WHERE title ILIKE ${term} OR summary ILIKE ${term} UNION ALL SELECT 'article', id, slug, title, summary, created_at FROM articles WHERE status = 'PUBLISHED' AND (title ILIKE ${term} OR summary ILIKE ${term}) ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`); return NextResponse.json({ data: result.rows, meta: { page, limit, request_id: crypto.randomUUID() } }) }

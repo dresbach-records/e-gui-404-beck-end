@@ -1,0 +1,4 @@
+import { NextResponse } from 'next/server'
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
+export async function GET() { const [runs, errors] = await Promise.all([db.execute(sql`SELECT id, status, started_at, finished_at, records_count FROM rnp_sync_runs ORDER BY started_at DESC LIMIT 50`), db.execute(sql`SELECT id, run_id, message, created_at FROM rnp_sync_errors ORDER BY created_at DESC LIMIT 50`)]); return NextResponse.json({ data: { runs: runs.rows, errors: errors.rows } }) }
