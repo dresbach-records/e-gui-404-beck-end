@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { requirePermission } from '@/lib/api/auth'
+import { requirePermission, requireSession } from '@/lib/api/auth'
 import { fail, ok, pagination } from '@/lib/api/http'
 
 export async function GET(request: NextRequest) {
+  try { await requireSession() } catch (error) { if (error instanceof Error && error.message === 'UNAUTHORIZED') return fail('Autenticação necessária.', 401); return fail('Não foi possível autorizar.', 403) }
   const { page, limit, offset } = pagination(request.nextUrl.searchParams)
   try { const rows = await db.execute(sql`SELECT c.id, c.slug, c.name, c.description, c.created_at, COUNT(t.id)::int AS thread_count FROM forum_categories c LEFT JOIN forum_threads t ON t.category_id = c.id GROUP BY c.id ORDER BY c.name LIMIT ${limit} OFFSET ${offset}`); return ok({ items: rows, page, limit }) } catch { return fail('Não foi possível carregar as categorias.', 503) }
 }
