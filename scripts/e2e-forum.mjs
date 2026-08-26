@@ -84,7 +84,7 @@ assert.notEqual(bLike.response.status, 401)
 assert.equal((await b.request(`/api/v1/forum/threads/${threadId}/moderation`, { method: 'POST', body: JSON.stringify({ action: 'lock' }) })).response.status, 403)
 assert.equal((await b.request('/api/v1/notifications')).response.status, 200)
 assert.equal((await b.request('/api/v1/users/me', { method: 'PATCH', body: JSON.stringify({ role: 'admin', permissions: ['forum.moderate'] }) })).response.status, 404)
-assert.equal((await b.request('/api/v1/reports/999999', { method: 'PATCH', body: JSON.stringify({ status: 'RESOLVED' }) })).response.status, 404)
+assert.equal((await b.request('/api/v1/reports/9223372036854775807', { method: 'PATCH', body: JSON.stringify({ status: 'RESOLVED' }) })).response.status, 404)
 
 console.log('PASS: autenticação, IDOR, isolamento de bookmarks/likes, reports e privilege escalation')
 console.log(`E2E base: ${baseUrl}`)
