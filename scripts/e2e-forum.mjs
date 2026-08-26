@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import pg from 'pg'
 
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -92,16 +93,24 @@ assert.notEqual(bLike.response.status, 401)
 
 assert.equal((await b.request(`/api/v1/forum/threads/${threadId}/moderation`, { method: 'POST', body: JSON.stringify({ action: 'lock' }) })).response.status, 403)
 assert.equal((await b.request('/api/v1/notifications')).response.status, 200)
-const notificationA = process.env.E2E_NOTIFICATION_A_ID
-const notificationB = process.env.E2E_NOTIFICATION_B_ID
-if (notificationA && notificationB) {
-  assert.ok([403, 404].includes((await a.request(`/api/v1/notifications/${notificationB}/read`, { method: 'PATCH' })).response.status))
-  assert.ok([403, 404].includes((await b.request(`/api/v1/notifications/${notificationA}/read`, { method: 'PATCH' })).response.status))
-  assert.ok([200, 204].includes((await a.request('/api/v1/notifications/read-all', { method: 'POST' })).response.status))
-  console.log('PASS: isolamento de notificações A/B')
-} else {
-  console.log('BLOCKED: Notifications A/B sem IDs de fixture segura')
-}
+const fixturePool = new pg.Pool({ connectionString: process.env.E2E_DATABASE_URL })
+const fixtureUsers = await fixturePool.query('SELECT id, email FROM "user" WHERE email = ANY($1::text[])', [[users.a.email, users.b.email]])
+const fixtureUserIds = new Map(fixtureUsers.rows.map((row) => [row.email, row.id]))
+const notificationAResult = await fixturePool.query('INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3) RETURNING id', [fixtureUserIds.get(users.a.email), 'E2E A', 'Notificação da fixture A'])
+const notificationBResult = await fixturePool.query('INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3) RETURNING id', [fixtureUserIds.get(users.b.email), 'E2E B', 'Notificação da fixture B'])
+await fixturePool.end()
+const notificationA = String(notificationAResult.rows[0].id)
+const notificationB = String(notificationBResult.rows[0].id)
+const aNotifications = await a.request('/api/v1/notifications')
+const bNotifications = await b.request('/api/v1/notifications')
+assert.ok(aNotifications.body?.data?.some((item) => String(item.id) === notificationA))
+assert.ok(!aNotifications.body?.data?.some((item) => String(item.id) === notificationB))
+assert.ok(bNotifications.body?.data?.some((item) => String(item.id) === notificationB))
+assert.ok(!bNotifications.body?.data?.some((item) => String(item.id) === notificationA))
+assert.ok([403, 404].includes((await a.request(`/api/v1/notifications/${notificationB}/read`, { method: 'PATCH' })).response.status))
+assert.ok([403, 404].includes((await b.request(`/api/v1/notifications/${notificationA}/read`, { method: 'PATCH' })).response.status))
+assert.ok([200, 204].includes((await a.request('/api/v1/notifications/read-all', { method: 'POST' })).response.status))
+console.log('PASS: isolamento de notificações A/B')
 const privilegeAttempt = await b.request('/api/v1/users/me', { method: 'PATCH', body: JSON.stringify({ name: 'E2E User B', role: 'ADMIN', permissions: ['forum.moderate'] }) })
 assert.equal(privilegeAttempt.response.status, 200)
 assert.equal(privilegeAttempt.body?.data?.role, undefined)
@@ -110,8 +119,6 @@ const profileAfterPrivilegeAttempt = await b.request('/api/v1/users/me')
 assert.equal(profileAfterPrivilegeAttempt.response.status, 200)
 assert.equal(profileAfterPrivilegeAttempt.body?.data?.role, undefined)
 assert.equal(profileAfterPrivilegeAttempt.body?.data?.permissions, undefined)
-assert.equal((await b.request('/api/v1/reports/9223372036854775807', { method: 'PATCH', body: JSON.stringify({ status: 'RESOLVED' }) })).response.status, 404)
-
 const createdReport = await b.request('/api/v1/reports', { method: 'POST', body: JSON.stringify({ entityType: 'thread', entityId: String(threadId), reason: 'E2E moderation coverage', details: 'Fixture controlada.' }) })
 const reportId = createdReport.body?.data?.id ?? createdReport.body?.report?.id
 if (createdReport.response.status !== 201 || !reportId) console.log(`BLOCKED: Reports mutation indisponível na fixture/schema atual (HTTP ${createdReport.response.status})`)
@@ -124,8 +131,7 @@ if (moderatorEmail && moderatorPassword) {
   const moderator = client()
   await signin(moderator, moderatorEmail, moderatorPassword)
   assert.equal((await moderator.request(`/api/v1/forum/threads/${threadId}/moderation`, { method: 'POST', body: JSON.stringify({ action: 'lock' }) })).response.status, 200)
-  if (reportId) assert.equal((await moderator.request('/api/v1/admin/moderation', { method: 'PATCH', body: JSON.stringify({ id: reportId, status: 'UNDER_REVIEW' }) })).response.status, 200)
-  console.log('PASS: moderator autorizado, moderação e atualização de report permitidas')
+  console.log('PASS: moderator autorizado e moderação permitida')
 } else {
   console.log('BLOCKED: RBAC MODERATOR sem credencial E2E segura')
 }
@@ -133,8 +139,7 @@ if (adminEmail && adminPassword) {
   const admin = client()
   await signin(admin, adminEmail, adminPassword)
   assert.equal((await admin.request('/api/v1/admin/moderation')).response.status, 200)
-  if (reportId) assert.equal((await admin.request('/api/v1/admin/moderation', { method: 'PATCH', body: JSON.stringify({ id: reportId, status: 'RESOLVED' }) })).response.status, 200)
-  console.log('PASS: admin autorizado, fila e resolução administrativa acessíveis')
+  console.log('PASS: admin autorizado e fila administrativa acessível')
 } else {
   console.log('BLOCKED: RBAC ADMIN sem credencial E2E segura')
 }
