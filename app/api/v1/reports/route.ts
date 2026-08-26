@@ -12,6 +12,9 @@ export async function POST(request: Request) {
   if (!bucket.allowed) return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Muitas denúncias. Tente novamente mais tarde.' } }, { status: 429, headers: { 'Retry-After': String(bucket.retryAfter ?? 60) } })
   const body = await request.json().catch(() => null)
   if (!body?.entityType || !body?.entityId || !body?.reason) return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'entityType, entityId e reason são obrigatórios.' } }, { status: 422 })
-  const rows = await db.execute(sql`INSERT INTO reports (reporter_id, entity_type, entity_id, reason, details) VALUES (${session.user.id}, ${String(body.entityType)}, ${String(body.entityId)}, ${String(body.reason)}, ${body.details ? String(body.details).slice(0, 4000) : null}) RETURNING id, status, created_at`)
-  return NextResponse.json({ data: rows.rows[0] }, { status: 201 })
+  const entityType = String(body.entityType).toLowerCase()
+  if (!['post', 'comment', 'thread'].includes(entityType)) return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'entityType deve ser post, comment ou thread.' } }, { status: 422 })
+  const rows = await db.execute(sql`INSERT INTO reports (reporter_id, entity_type, entity_id, reason, details) VALUES (${session.user.id}, ${entityType}, ${String(body.entityId)}, ${String(body.reason).slice(0, 200)}, ${body.details ? String(body.details).slice(0, 4000) : null}) RETURNING id, entity_type, entity_id, reason, status, created_at, updated_at`)
+  await db.execute(sql`INSERT INTO audit_logs (actor_id, action, entity_type, entity_id) VALUES (${session.user.id}, 'REPORT_CREATED', 'report', ${String(rows.rows[0].id)})`)
+  return NextResponse.json({ success: true, data: rows.rows[0] }, { status: 201 })
 }
