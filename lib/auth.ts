@@ -5,7 +5,24 @@ export const auth = betterAuth({
   database: pool,
   basePath: '/api/v1/auth',
   baseURL: process.env.BETTER_AUTH_URL ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.V0_RUNTIME_URL),
-  emailAndPassword: { enabled: true, autoSignIn: true },
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    sendResetPassword: async ({ user, url }) => {
+      if (process.env.RESET_PASSWORD_WEBHOOK_URL) {
+        await fetch(process.env.RESET_PASSWORD_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: user.email, url }),
+        })
+        return
+      }
+      if (process.env.NODE_ENV !== 'development') {
+        throw new Error('Password reset delivery is not configured')
+      }
+      console.info('[v0] Password reset delivery is not configured for development:', url)
+    },
+  },
   trustedOrigins: [
     'https://egui404.fun',
     'https://www.egui404.fun',
