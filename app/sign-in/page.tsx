@@ -15,5 +15,5 @@ export default function SignInPage() {
     router.push('/admin')
     router.refresh()
   }
-  return <main className="min-h-screen bg-black p-6 text-white"><form onSubmit={submit} className="mx-auto mt-24 flex max-w-sm flex-col gap-4 border border-red-900 p-8"><h1 className="text-2xl font-bold text-red-500">E GUI 404 // LOGIN</h1><label>Email<input name="email" type="email" required className="mt-2 w-full bg-zinc-900 p-3" /></label><label>Senha<input name="password" type="password" required className="mt-2 w-full bg-zinc-900 p-3" /></label>{error && <p className="text-red-400">{error}</p>}<button className="bg-red-700 p-3 font-bold">ENTRAR</button></form></main>
+  return <main className="min-h-screen bg-black p-6 text-white"><form onSubmit={submit} className="mx-auto mt-24 flex max-w-sm flex-col gap-4 border border-red-900 p-8"><h1 className="text-2xl font-bold text-red-500">E GUI 404 // LOGIN</h1><label>Email<input name="email" type="email" required className="mt-2 w-full bg-zinc-900 p-3" /></label><label>Senha<input name="password" type="password" required className="mt-2 w-full bg-zinc-900 p-3" /></label>{error && <p className="text-red-400">{error}</p>}<button className="bg-red-700 p-3 font-bold">ENTRAR</button><a href="/reset-password" className="text-sm text-red-400 underline">Esqueci minha senha</a></form></main>
 }
