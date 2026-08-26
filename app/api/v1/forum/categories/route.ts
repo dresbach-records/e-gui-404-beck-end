@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { requirePermission } from '@/lib/api/auth'
+import { requirePermission, requireSession } from '@/lib/api/auth'
 import { fail, ok, pagination } from '@/lib/api/http'
 
 export async function GET(request: NextRequest) {

@@ -9,7 +9,8 @@
     "start": "next start",
     "db:seed": "tsx scripts/seed.ts",
     "test": "tsx --test lib/**/*.test.ts",
-    "test:api": "node scripts/smoke-api.mjs"
+    "test:api": "node scripts/smoke-api.mjs",
+    "test:e2e:forum": "node scripts/e2e-forum.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
