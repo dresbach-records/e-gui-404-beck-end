@@ -66,10 +66,10 @@ assert.equal(comment.response.status, 201)
 const postId = comment.body?.data?.post?.id ?? comment.body?.post?.id
 assert.ok(postId, 'comentário fixture deve retornar id')
 
-assert.ok([403, 404].includes((await b.request(`/api/v1/forum/threads/${threadId}`, { method: 'PATCH', body: JSON.stringify({ title: 'IDOR' }) })).response.status), 'B não pode editar thread de A')
-assert.ok([403, 404].includes((await b.request(`/api/v1/forum/threads/${threadId}`, { method: 'DELETE' })).response.status), 'B não pode excluir thread de A')
-assert.ok([403, 404].includes((await b.request(`/api/v1/forum/posts/${postId}`, { method: 'PATCH', body: JSON.stringify({ body: 'IDOR' }) })).response.status), 'B não pode editar comentário de A')
-assert.ok([403, 404].includes((await b.request(`/api/v1/forum/posts/${postId}`, { method: 'DELETE' })).response.status), 'B não pode excluir comentário de A')
+assert.equal((await b.request(`/api/v1/forum/threads/${threadId}`, { method: 'PATCH', body: JSON.stringify({ title: 'IDOR' }) })).response.status, 403)
+assert.equal((await b.request(`/api/v1/forum/threads/${threadId}`, { method: 'DELETE' })).response.status, 403)
+assert.equal((await b.request(`/api/v1/forum/posts/${postId}`, { method: 'PATCH', body: JSON.stringify({ body: 'IDOR' }) })).response.status, 403)
+assert.equal((await b.request(`/api/v1/forum/posts/${postId}`, { method: 'DELETE' })).response.status, 403)
 
 assert.equal((await a.request(`/api/v1/forum/threads/${threadId}/bookmark`, { method: 'POST' })).response.status, 200)
 const bBookmark = await b.request(`/api/v1/forum/threads/${threadId}/bookmark`)
