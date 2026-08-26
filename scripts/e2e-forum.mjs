@@ -34,6 +34,15 @@ async function signup(api, user) {
   assert.ok([200, 201, 409].includes(result.response.status), `signup inesperado: ${result.response.status}`)
 }
 
+async function signin(api, email, secret) {
+  const result = await api.request('/api/v1/auth/sign-in/email', {
+    method: 'POST',
+    body: JSON.stringify({ email, password: secret }),
+  })
+  assert.ok([200, 201].includes(result.response.status), `signin inesperado: ${result.response.status}`)
+  assert.equal((await api.request('/api/v1/auth/get-session')).response.status, 200)
+}
+
 const anonymous = client()
 const unauthenticated = await anonymous.request('/api/v1/forum/threads')
 assert.equal(unauthenticated.response.status, 401, 'feed sem sessão deve retornar 401')
@@ -83,6 +92,16 @@ assert.notEqual(bLike.response.status, 401)
 
 assert.equal((await b.request(`/api/v1/forum/threads/${threadId}/moderation`, { method: 'POST', body: JSON.stringify({ action: 'lock' }) })).response.status, 403)
 assert.equal((await b.request('/api/v1/notifications')).response.status, 200)
+const notificationA = process.env.E2E_NOTIFICATION_A_ID
+const notificationB = process.env.E2E_NOTIFICATION_B_ID
+if (notificationA && notificationB) {
+  assert.ok([403, 404].includes((await a.request(`/api/v1/notifications/${notificationB}/read`, { method: 'PATCH' })).response.status))
+  assert.ok([403, 404].includes((await b.request(`/api/v1/notifications/${notificationA}/read`, { method: 'PATCH' })).response.status))
+  assert.ok([200, 204].includes((await a.request('/api/v1/notifications/read-all', { method: 'POST' })).response.status))
+  console.log('PASS: isolamento de notificações A/B')
+} else {
+  console.log('BLOCKED: Notifications A/B sem IDs de fixture segura')
+}
 const privilegeAttempt = await b.request('/api/v1/users/me', { method: 'PATCH', body: JSON.stringify({ name: 'E2E User B', role: 'ADMIN', permissions: ['forum.moderate'] }) })
 assert.equal(privilegeAttempt.response.status, 200)
 assert.equal(privilegeAttempt.body?.data?.role, undefined)
@@ -92,6 +111,33 @@ assert.equal(profileAfterPrivilegeAttempt.response.status, 200)
 assert.equal(profileAfterPrivilegeAttempt.body?.data?.role, undefined)
 assert.equal(profileAfterPrivilegeAttempt.body?.data?.permissions, undefined)
 assert.equal((await b.request('/api/v1/reports/9223372036854775807', { method: 'PATCH', body: JSON.stringify({ status: 'RESOLVED' }) })).response.status, 404)
+
+const createdReport = await b.request('/api/v1/reports', { method: 'POST', body: JSON.stringify({ entityType: 'thread', entityId: String(threadId), reason: 'E2E moderation coverage', details: 'Fixture controlada.' }) })
+const reportId = createdReport.body?.data?.id ?? createdReport.body?.report?.id
+if (createdReport.response.status !== 201 || !reportId) console.log(`BLOCKED: Reports mutation indisponível na fixture/schema atual (HTTP ${createdReport.response.status})`)
+
+const moderatorEmail = process.env.E2E_MODERATOR_EMAIL
+const moderatorPassword = process.env.E2E_MODERATOR_PASSWORD
+const adminEmail = process.env.E2E_ADMIN_EMAIL
+const adminPassword = process.env.E2E_ADMIN_PASSWORD
+if (moderatorEmail && moderatorPassword) {
+  const moderator = client()
+  await signin(moderator, moderatorEmail, moderatorPassword)
+  assert.equal((await moderator.request(`/api/v1/forum/threads/${threadId}/moderation`, { method: 'POST', body: JSON.stringify({ action: 'lock' }) })).response.status, 200)
+  if (reportId) assert.equal((await moderator.request('/api/v1/admin/moderation', { method: 'PATCH', body: JSON.stringify({ id: reportId, status: 'UNDER_REVIEW' }) })).response.status, 200)
+  console.log('PASS: moderator autorizado, moderação e atualização de report permitidas')
+} else {
+  console.log('BLOCKED: RBAC MODERATOR sem credencial E2E segura')
+}
+if (adminEmail && adminPassword) {
+  const admin = client()
+  await signin(admin, adminEmail, adminPassword)
+  assert.equal((await admin.request('/api/v1/admin/moderation')).response.status, 200)
+  if (reportId) assert.equal((await admin.request('/api/v1/admin/moderation', { method: 'PATCH', body: JSON.stringify({ id: reportId, status: 'RESOLVED' }) })).response.status, 200)
+  console.log('PASS: admin autorizado, fila e resolução administrativa acessíveis')
+} else {
+  console.log('BLOCKED: RBAC ADMIN sem credencial E2E segura')
+}
 
 console.log('PASS: autenticação, IDOR, isolamento de bookmarks/likes, reports e privilege escalation')
 console.log(`E2E base: ${baseUrl}`)
