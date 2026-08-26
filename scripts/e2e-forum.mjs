@@ -47,7 +47,7 @@ assert.equal((await b.request('/api/v1/auth/get-session')).response.status, 200)
 
 const categories = await a.request('/api/v1/forum/categories')
 assert.equal(categories.response.status, 200)
-const category = categories.body?.data?.items?.rows?.[0] ?? categories.body?.data?.categories?.[0] ?? (Array.isArray(categories.body?.data) ? categories.body.data[0] : null) ?? categories.body?.items?.[0]
+const category = categories.body?.data?.items?.rows?.[0] ?? categories.body?.data?.categories?.[0] ?? (Array.isArray(categories.body?.data) ? categories.body.data[0] : null) ?? categories.body?.items?.[0] ?? categories.body?.data?.items?.rows?.[0]
 if (!category?.id) {
   console.log('PENDENTE: banco não possui categoria para criar fixture E2E')
   process.exit(2)
